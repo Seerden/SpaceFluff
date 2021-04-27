@@ -1,6 +1,6 @@
 **/*.zip
 **/votes_*.csv
 **/Manifest.ipynb
-# **/zooniverse_exports
+**/zooniverse_exports
 **/.ipynb_checkpoints
 /analysis/image/thumbnails
