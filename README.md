@@ -15,7 +15,7 @@ This repo contains all documents of relevance for my BSc research project.
 
 - `/catalogue`
 
-    Contains code pertaining to the catalogues of LSB/UDG candidates within the Fornax cluster, like extraction of object names and relevant physical properties, which are to be used on conjunction with the SpaceFluff data as _ground truth_ and for quantitative analysis.
+    Contains code pertaining to the catalogues of LSB/UDG candidates within the Fornax cluster, like extraction of object names and relevant physical properties, which are to be used in conjunction with the SpaceFluff data as _ground truth_ and for quantitative analysis.
 
 - `/sources`
     Contains links and blurbs pertaining to papers and other sources potentially relevant during the project and eventually for the accompanying thesis paper.
