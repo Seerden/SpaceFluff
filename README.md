@@ -24,6 +24,7 @@ This repo contains all documents of relevance for my BSc research project.
 The end goal of the project is to quantify two things:
     
     - Is citizen science a valuable method of science when it comes to classification of LSB/UDGs?
+    - Do volunteer scientists become better at classification as they classifiy more and more objects?
     - Which objects in the SpaceFluff dataset are UDGs in the Fornax cluster?
 
 - ### Inspect, explore

@@ -5,3 +5,5 @@
 **/.ipynb_checkpoints
 /analysis/image/thumbnails
 /sources/*.pdf
+
+/analysis/classify_workflow/*.csv
