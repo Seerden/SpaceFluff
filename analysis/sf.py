@@ -208,3 +208,31 @@ def make_df_tasks_with_props(df, candidate_names, object_info):
     df_tasks_with_props = df_tasks_with_props[~df_tasks_with_props['# votes'].isnull()]
 
     return df_tasks_with_props 
+
+def get_power_users(df, vote_count_threshold):
+    """
+    @param df: parsed dataframe where each row is a single classification
+    @param {int} vote_count_threshold: return only users that made at least this many valid classifications
+    """
+    
+    groupby_username = df.groupby(['user_name'])
+    groupby_username_filtered = groupby_username.filter(lambda x: x.shape[0] >= vote_count_threshold)
+
+    grouped = groupby_username_filtered.groupby(['user_name'])
+
+    filtered_usernames_and_votes = []
+    for username, vote_count in grouped:
+        filtered_usernames_and_votes.append({
+            "username": username,
+            "votes": len(vote_count)
+        })
+
+    return filtered_usernames_and_votes
+
+def make_df_vote_threshold(df, vote_count_threshold):
+    users_and_votes = get_power_users(df, vote_count_threshold)
+    usernames = [user['username'] for user in users_and_votes]
+    
+    df = df[df['user_name'].isin(usernames)]
+    
+    return df
