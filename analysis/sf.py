@@ -1,6 +1,7 @@
 import pandas as pd
 from dateutil.parser import parse
-
+import numpy as np
+import os
 
 def getFilename(subject_data):
     """
@@ -85,3 +86,125 @@ def extractTaskValue(annotations, task):
     filtered = list(filter(lambda x: x['task'] == task, annotations))
     if len(filtered) > 0:
         return filtered[0]['value']
+
+def make_df_task0(df, candidate_names):
+    # group df by filename, so that each group contains only rows belonging to that object
+    gr = df.groupby('Filename')
+
+    # create empty list to push results to
+    task0Values = []
+
+    # loop over every group created above to accumulate 'task 0' votes ('galaxy'/'group of objects'/'something else')
+    
+    for objectName in candidate_names:
+        try:
+            task0 = gr.get_group(objectName)['Task0']
+
+            counts = task0.value_counts().to_dict()
+
+            countObj = {
+                "name": objectName,
+                "counts": counts,
+            }
+
+            task0Values.append(countObj)
+        except:
+            continue
+
+    df_task0 = pd.DataFrame(task0Values)
+
+    answer_types = ['Galaxy', 'Group of objects (Cluster)', 'Something else/empty center']
+
+    df_task0['# votes'] = df_task0['counts'].apply(lambda x: sum(x.values()))
+
+    for ans_type in answer_types:
+        vote_percentage_column = df_task0['counts'].apply(lambda x: percentageVotesForAnswer(x, ans_type))
+        df_task0['% votes {}'.format(ans_type)] = vote_percentage_column
+
+    df_task0['name'] = df_task0['name'].apply(lambda x: x[:-9])
+
+    # filter dataframe and only leave objects with more than 5 votes
+    df_task0 = df_task0[df_task0['# votes'] > 5]
+    
+    return df_task0
+
+def extract_retired_info(subject_data):
+    '''
+        @param subject_data: (dataframe 'subject_data' column)
+    '''
+    return list(subject_data.values())[0]["retired"]
+
+def make_df_with_props(df, candidate_names):
+    df["retired"] = df["subject_data"].apply(extract_retired_info)
+    df_retired = df[~df["retired"].isnull()]
+
+    gr_retired = df_retired.groupby(["Filename"])  # group by filename
+    props = ["R", "RA", "DEC", "G-I"]              # extract object properties
+
+    props_list = []
+
+    for objectName in candidate_names:
+        # get group
+        try:
+            row = gr_retired.get_group(objectName)['subject_data']
+
+            # get first entry in the group (props should be the same for every entry since they all describe the same object)
+            firstEntry = row.iloc[0]
+            values  = list(firstEntry.values())[0]
+
+            # create object with name, properties
+            entry = {'name': objectName[:-9]}
+
+            for key in props:
+                entry[key] = values[key]
+
+            props_list.append(entry)
+        except:
+            continue
+            
+    df_props = pd.DataFrame(props_list)
+
+    df_task0 = make_df_task0(df, candidate_names)
+    df_with_props = df_task0.merge(df_props, how='outer')
+
+    return df_with_props
+
+def make_df_tasks_with_props(df, candidate_names, object_info):
+    # create a temporary dataframe containing only classifications where 'task0' == 'Galaxy'
+    # df_galaxy = df[(df['Task0'] == 'Galaxy') & (df['annotations'].map(len) > 1)]
+    df_galaxy = df[(df['Task0'] == 'Galaxy')]
+    galaxy_names = df_galaxy['Filename']
+
+    gr_by_name = df.groupby(['Filename'])
+
+    galaxy_task1_values = []
+
+    for name in set(galaxy_names):
+        group = gr_by_name.get_group(name)        # get all classifications of this object from df
+        group = group[group['Task0'] == 'Galaxy'] # select only rows where task0 was answered with 'galaxy'
+        
+        rowObj = {}
+        
+        # add 'fluffy' and 'bright' rows
+        for answer in ['Fluffy', 'Bright']:
+            rowObj['% {}'.format(answer)] = round(list(group['Task1']).count(answer)*100/group.shape[0], 1)
+        
+        # also manually add 'None' row since None is parsed to NaN otherwise
+        none_count = group[group['Task1'].isnull()].shape[0]
+        rowObj['% None'] = round(none_count*100/group.shape[0], 1)
+        rowObj['name'] = name[:-9]  # add object's name to rowObj
+        
+        galaxy_task1_values.append(rowObj)  # append rowObj to list
+
+    df_task1 = pd.DataFrame(galaxy_task1_values)
+
+    df_task0 = make_df_task0(df, candidate_names)
+    df_tasks = df_task1.merge(df_task0, on='name', how='outer')
+
+    # merge properties onto dataframe
+    df_tasks_with_props = df_tasks.merge(object_info, how='outer', on='name')
+
+    # filter out objects without actual votes
+    df_tasks_with_props = df_tasks_with_props[~df_tasks_with_props['# votes'].isnull()]
+
+    return df_tasks_with_props 
