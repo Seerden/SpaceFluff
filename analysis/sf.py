@@ -157,27 +157,25 @@ def make_df_with_props(df, candidate_names):
 def make_df_tasks_with_props(df, candidate_names, object_info):
     # create a temporary dataframe containing only classifications where 'task0' == 'Galaxy'
     # df_galaxy = df[(df['Task0'] == 'Galaxy') & (df['annotations'].map(len) > 1)]
-    df_galaxy = df[(df['Task0'] == 'Galaxy')]
+    df_galaxy = df[df['Task0'] == 'Galaxy']
     galaxy_names = df_galaxy['Filename']
 
-    gr_by_name = df.groupby(['Filename'])
+    groupby_name = df.groupby(['Filename'])
 
     galaxy_task1_values = []
-
     for name in set(galaxy_names):
-        group = gr_by_name.get_group(name)        # get all classifications of this object from df
-        group = group[group['Task0'] == 'Galaxy'] # select only rows where task0 was answered with 'galaxy'
+        group = groupby_name.get_group(name)        # get all classifications of this object from df
+        group = group[group['Task0'] == 'Galaxy']   # select only rows where task0 was answered with 'galaxy'
         
-        rowObj = {}
+        rowObj = {
+            "name": name
+        }
         
-        # add 'fluffy' and 'bright' rows
-        for answer in ['Fluffy', 'Bright']:
+        for answer in ['Fluffy', 'Bright']:  # add 'fluffy' and 'bright' columns
             rowObj['% {}'.format(answer)] = round(list(group['Task1']).count(answer)*100/group.shape[0], 1)
         
-        # also manually add 'None' row since None is parsed to NaN otherwise
-        none_count = group[group['Task1'].isnull()].shape[0]
+        none_count = group[group['Task1'].isnull()].shape[0]  # also manually add 'None' row since None is parsed to NaN otherwise
         rowObj['% None'] = round(none_count*100/group.shape[0], 1)
-        rowObj['name'] = name  # add object's name to rowObj
         
         galaxy_task1_values.append(rowObj)  # append rowObj to list
 
@@ -186,11 +184,8 @@ def make_df_tasks_with_props(df, candidate_names, object_info):
     df_task0 = make_df_task0(df, candidate_names)
     df_tasks = df_task1.merge(df_task0, on='name', how='outer')
 
-    # merge properties onto dataframe
-    df_tasks_with_props = df_tasks.merge(object_info, how='outer', on='name')
-
-    # filter out objects without actual votes
-    df_tasks_with_props = df_tasks_with_props[~df_tasks_with_props['# votes'].isnull()]
+    df_tasks_with_props = df_tasks.merge(object_info, how='outer', on='name')  # merge properties onto dataframe
+    df_tasks_with_props = df_tasks_with_props[~df_tasks_with_props['# votes'].isnull()]  # filter out objects without actual votes
 
     return df_tasks_with_props 
 
