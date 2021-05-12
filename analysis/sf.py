@@ -4,8 +4,10 @@ import os
 
 def getFilename(subject_data):
     """
-    Given the subject_data column from a row of one of our SpaceFluff dataframes, extract the name of the object being classified
-    by extracting the 'Filename'|'image'|'IMAGE' field"
+    Given the subject_data field from a row of one of our SpaceFluff dataframes, extract the name of the object being classified
+    by extracting the 'Filename'|'image'|'IMAGE' field".
+
+    To be used with df[column].apply()
 
     @returns {string} filename of the object being classified, including the extension '_insp.png'
     """
@@ -15,17 +17,9 @@ def getFilename(subject_data):
         "Filename" if "Filename" in keys else "image" if "image" in keys else "IMAGE" if "IMAGE" in keys else None)
 
     if accessKey:
-        return list(subject_data.values())[0][accessKey]
+        return list(subject_data.values())[0][accessKey][:-9]
     else:
         print("No filename found!")
-
-
-def getObjectName(subject_data):
-    '''
-        @param {subject_data} subject_data column of one row of a SpaceFluff dataframe
-        @returns {string} name of the object that was classified, without the _insp.png extension
-    '''
-    return getFilename(subject_data)[:-9]
 
 
 def getMetadataValue(metadata, field):
@@ -87,16 +81,11 @@ def extractTaskValue(annotations, task):
         return filtered[0]['value']
 
 def make_df_task0(df, candidate_names):
-    # group df by filename, so that each group contains only rows belonging to that object
-    gr = df.groupby('Filename')
+    gr = df.groupby('Filename')  # group df by filename, so that each group contains only rows belonging to that object
 
-    # create empty list to push results to
-    task0Values = []
-
-    # loop over every group created above to accumulate 'task 0' votes ('galaxy'/'group of objects'/'something else')
-    
+    task0Values = []  # create empty list to push results to
     for objectName in candidate_names:
-        try:
+        try:  # loop over every group created above to accumulate 'task 0' votes ('galaxy'/'group of objects'/'something else')
             task0 = gr.get_group(objectName)['Task0']
 
             counts = task0.value_counts().to_dict()
@@ -120,10 +109,7 @@ def make_df_task0(df, candidate_names):
         vote_percentage_column = df_task0['counts'].apply(lambda x: percentageVotesForAnswer(x, ans_type))
         df_task0['% votes {}'.format(ans_type)] = vote_percentage_column
 
-    df_task0['name'] = df_task0['name'].apply(lambda x: x[:-9])
-
-    # filter dataframe and only leave objects with more than 5 votes
-    df_task0 = df_task0[df_task0['# votes'] > 5]
+    df_task0 = df_task0[df_task0['# votes'] > 5]  # filter dataframe and only leave objects with more than 5 votes
     
     return df_task0
 
@@ -152,7 +138,7 @@ def make_df_with_props(df, candidate_names):
             values  = list(firstEntry.values())[0]
 
             # create object with name, properties
-            entry = {'name': objectName[:-9]}
+            entry = {'name': objectName}
 
             for key in props:
                 entry[key] = values[key]
@@ -191,7 +177,7 @@ def make_df_tasks_with_props(df, candidate_names, object_info):
         # also manually add 'None' row since None is parsed to NaN otherwise
         none_count = group[group['Task1'].isnull()].shape[0]
         rowObj['% None'] = round(none_count*100/group.shape[0], 1)
-        rowObj['name'] = name[:-9]  # add object's name to rowObj
+        rowObj['name'] = name  # add object's name to rowObj
         
         galaxy_task1_values.append(rowObj)  # append rowObj to list
 
