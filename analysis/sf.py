@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import os
+import json
+from datetime import date
 
 def getFilename(subject_data):
     """
@@ -215,4 +217,41 @@ def make_df_vote_threshold(df, vote_count_threshold):
     
     df = df[df['user_name'].isin(usernames)]
     
+    return df
+
+def make_df_classify():
+    cwd = os.path.dirname(os.path.abspath(__file__))
+    loc = os.path.join(cwd, '../SpaceFluff/zooniverse_exports/classify-classifications.csv')
+
+    df = pd.read_csv(loc, delimiter=",")
+
+    # JSON parse the columns that were stringified
+    columns_to_parse = ['annotations', 'subject_data', 'metadata']
+
+    for column in columns_to_parse:
+        df[column] = df[column].apply(json.loads)
+
+    # extract filename, task0 and task1 values to new dataframe columns
+    df['Filename'] = df['subject_data'].apply(getFilename)
+    df['Task0'] = df['annotations'].apply(lambda x: extract_task_value(0, x))
+    df['Task1'] = df['annotations'].apply(lambda x: extract_task_value(1, x))
+
+    # finally, remove all rows where task0 wasn't answered (because the row, then, is useless)
+    df = df[~df['Task0'].isnull()]
+
+    # filter out classifications from beta
+    df['created_at'] = parseTime(df['created_at'])
+    end_of_beta = pd.Timestamp(date(2020,10,20), tz='utc')
+    df = df[df['created_at'] > end_of_beta]
+
+    # create temporary isRetired and alreadySeen rows
+    df['isRetired'] = df['metadata'].apply(lambda x: x['subject_selection_state']['retired'])
+    df['alreadySeen'] = df['metadata'].apply(lambda x: x['subject_selection_state']['already_seen'])
+
+    # remove rows where isRetired or alreadySeen
+    df = df[~df['isRetired'] & ~df['alreadySeen']]
+
+    # remove isRetired and alreadySeen columns since they're obsolete hereafter
+    df.drop(['isRetired', 'alreadySeen'], axis=1, inplace=True)
+
     return df
