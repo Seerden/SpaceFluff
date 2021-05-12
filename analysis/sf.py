@@ -1,5 +1,4 @@
 import pandas as pd
-from dateutil.parser import parse
 import numpy as np
 import os
 
@@ -38,12 +37,12 @@ def getMetadataValue(metadata, field):
     return metadata['subject_selection_state'][field]
 
 
-def parseTime(time_string):
+def parseTime(created_at):
     '''
-        @param {string} time_string: time string from `created_at` field in a SpaceFluff dataframe, e.g. 2020-09-02 07:47:42 UTC
-        @returns {pd.Timestamp} `time_string` parsed as pandas Timestamp
+    @param {df column} created_at: df['created_at'] column
     '''
-    return pd.Timestamp(parse(time_string))
+    return pd.to_datetime(created_at, format="%Y-%m-%d %H:%M:%S %Z")
+
 
 
 def getGroupSize(group):
