@@ -8,5 +8,7 @@
 
 /analysis/classify workflow/*.csv
 
+**/__pycache__
+**/*.pyc
 **/**/__pycache__
-**/**.pyc
+**/*.pyc
