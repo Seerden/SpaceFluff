@@ -7,3 +7,6 @@
 /sources/*.pdf
 
 /analysis/classify workflow/*.csv
+
+**/**/__pycache__
+**/**.pyc
