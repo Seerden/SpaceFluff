@@ -14,28 +14,22 @@ import numpy as np
 import json
 
 def make_df_classify():
-
-    # JSON parse the columns that were stringified
-    converters = {}
+    converters = {}  # create converters dict to pass to pd.read_csv (speed up the read_csv call by quite a bit)
     for column in ['annotations', 'subject_data', 'metadata']:
         converters[column] = json_parser
 
     cwd = os.path.dirname(os.path.abspath(__file__))
-    loc = os.path.join(
-        cwd, '../SpaceFluff/zooniverse_exports/classify-classifications.csv')
-
+    loc = os.path.join(cwd, '../SpaceFluff/zooniverse_exports/classify-classifications.csv')
     df = pd.read_csv(loc, delimiter=",", converters=converters)
     
-    # extract filename, task0 and task1 values to new dataframe columns
     df['Filename'] = df['subject_data'].apply(getFilename)
-    
-    task_indices = [0,1]
+
+    task_indices = [0,1]  # these are the task indices from the 'classify' workflow. we can make this function work for the 'hardcore' workflow by making this a function param
     tasks = ['T{}'.format(i) for i in task_indices]
     for task in tasks:
         df[task] = df['annotations'].apply(lambda x: extractTaskValue(x, task))
 
-    # finally, remove all rows where task0 wasn't answered (because the row, then, is useless)
-    df = df[~df['T0'].isnull()]
+    df = df[~df['T0'].isnull()]  # if user didn't answer T0, the classification is void and can be removed safely
 
     # filter out classifications from beta
     df['created_at'] = parseTime(df['created_at'])
@@ -43,16 +37,11 @@ def make_df_classify():
     df = df[df['created_at'] > end_of_beta]
 
     # create temporary isRetired and alreadySeen rows
-    df['isRetired'] = df['metadata'].apply(
-        lambda x: x['subject_selection_state']['retired'])
-    df['alreadySeen'] = df['metadata'].apply(
-        lambda x: x['subject_selection_state']['already_seen'])
+    df['isRetired'] = df['metadata'].apply(lambda x: x['subject_selection_state']['retired'])
+    df['alreadySeen'] = df['metadata'].apply(lambda x: x['subject_selection_state']['already_seen'])
 
-    # remove rows where isRetired or alreadySeen
-    df = df[~df['isRetired'] & ~df['alreadySeen']]
-
-    # remove isRetired and alreadySeen columns since they're obsolete hereafter
-    df.drop(['isRetired', 'alreadySeen'], axis=1, inplace=True)
+    df = df[~df['isRetired'] & ~df['alreadySeen']]  # remove rows where isRetired or alreadySeen
+    df.drop(['isRetired', 'alreadySeen'], axis=1, inplace=True)  # remove isRetired and alreadySeen columns since they're obsolete hereafter
 
     return df
 
@@ -66,7 +55,6 @@ def make_df_vote_threshold(df, vote_count_threshold):
 
 def make_df_tasks_with_props(df, candidate_names, object_info):
     # create a temporary dataframe containing only classifications where 'task0' == 'Galaxy'
-    # df_galaxy = df[(df['Task0'] == 'Galaxy') & (df['annotations'].map(len) > 1)]
     df_galaxy = df[df['T0'] == 'Galaxy']
     galaxy_names = df_galaxy['Filename']
 
