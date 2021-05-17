@@ -23,7 +23,6 @@ def getFilename(subject_data):
     else:
         print("No filename found!")
 
-
 def getMetadataValue(metadata, field):
     '''
         @param metadata metadata column from a row in a SpaceFluff dataframe
@@ -32,14 +31,11 @@ def getMetadataValue(metadata, field):
     '''
     return metadata['subject_selection_state'][field]
 
-
 def parseTime(created_at):
     '''
     @param {df column} created_at: df['created_at'] column
     '''
     return pd.to_datetime(created_at, format="%Y-%m-%d %H:%M:%S %Z")
-
-
 
 def getGroupSize(group):
     '''
@@ -47,7 +43,6 @@ def getGroupSize(group):
         @returns number of rows in group (corresponds to number of columns in case of parsed SpaceFluff dataframe)
     '''
     return group.shape[0]
-
 
 def extract_task_value(task_index, row):
     try:
@@ -93,7 +88,7 @@ def get_power_users(df, vote_count_threshold):
     @param {int} vote_count_threshold: return only users that made at least this many valid classifications
     """
     
-    groupby_username = df.groupby(['user_name'])
+    groupby_username = df[['user_name']].groupby(['user_name'])
     groupby_username_filtered = groupby_username.filter(lambda x: x.shape[0] >= vote_count_threshold)
 
     grouped = groupby_username_filtered.groupby(['user_name'])
