@@ -13,18 +13,21 @@ import pandas as pd
 import numpy as np
 import json
 
-def make_df_classify():
-    converters = {}  # create converters dict to pass to pd.read_csv (speed up the read_csv call by quite a bit)
-    for column in ['annotations', 'subject_data', 'metadata']:
-        converters[column] = json_parser
+def make_df_classify(workflow, task_indices=[0,1]):  # [0,1] are the indices from the classify workflow
+    converters = { column_name: json_parser for column_name in ['annotations', 'subject_data', 'metadata'] }
 
     cwd = os.path.dirname(os.path.abspath(__file__))
-    loc = os.path.join(cwd, '../SpaceFluff/zooniverse_exports/classify-classifications.csv')
+    csv_filenames = {
+        'classify': 'classify-classifications',
+        'hardcore': 'classify-hardcore-edition-classifications',
+        'onthego': 'classify-on-the-go-classifications'
+    }
+    pathstring = '../SpaceFluff/zooniverse_exports/{}.csv'.format(csv_filenames[workflow])
+    loc = os.path.join(cwd, pathstring)
     df = pd.read_csv(loc, delimiter=",", converters=converters)
     
-    df['Filename'] = df['subject_data'].apply(getFilename)
+    df.insert(0, 'Filename', df['subject_data'].apply(getFilename))
 
-    task_indices = [0,1]  # these are the task indices from the 'classify' workflow. we can make this function work for the 'hardcore' workflow by making this a function param
     tasks = ['T{}'.format(i) for i in task_indices]
     for task in tasks:
         df[task] = df['annotations'].apply(lambda x: extractTaskValue(x, task))
@@ -36,13 +39,16 @@ def make_df_classify():
     end_of_beta = pd.Timestamp(date(2020, 10, 20), tz='utc')
     df = df[df['created_at'] > end_of_beta]
 
-    # create temporary isRetired and alreadySeen rows
-    df['isRetired'] = df['metadata'].apply(lambda x: x['subject_selection_state']['retired'])
-    df['alreadySeen'] = df['metadata'].apply(lambda x: x['subject_selection_state']['already_seen'])
+    try:
+        df['isRetired'] = df['metadata'].apply(lambda x: x.get('subject_selection_state', {}).get('retired'))
+        df['alreadySeen'] = df['metadata'].apply(lambda x: x.get('subject_selection_state', {}).get('already_seen'))
 
-    df = df[~df['isRetired'] & ~df['alreadySeen']]  # remove rows where isRetired or alreadySeen
-    df.drop(['isRetired', 'alreadySeen'], axis=1, inplace=True)  # remove isRetired and alreadySeen columns since they're obsolete hereafter
-
+        # filter alreadySeen or retired rows, and drop obsolete columns from the dataframe altogether
+        df = df.query('(isRetired == False) & (alreadySeen == False)')
+        df = df.drop(['isRetired', 'alreadySeen', 'gold_standard'], axis=1)
+    except: 
+        pass
+    
     return df
 
 def make_df_vote_threshold(df, vote_count_threshold):
@@ -53,38 +59,41 @@ def make_df_vote_threshold(df, vote_count_threshold):
     
     return df
 
-def make_df_tasks_with_props(df, candidate_names, object_info):
+def make_df_tasks_with_props(df, candidate_names, object_info, onthego=False):
     # create a temporary dataframe containing only classifications where 'task0' == 'Galaxy'
     df_galaxy = df[df['T0'] == 'Galaxy']
     galaxy_names = df_galaxy['Filename']
 
-    groupby_name = df_galaxy[['Filename', 'T0', 'T1']].groupby(['Filename'])
+    df_task0 = make_df_task0(df, candidate_names, onthego)
 
-    galaxy_task1_values = []
-    for name in set(galaxy_names):
-        group = groupby_name.get_group(name)        # get all classifications of this object from df
-        
-        rowObj = {
-            "name": name
-        }
-        
-        for answer in ['Fluffy', 'Bright']:  # add 'fluffy' and 'bright' columns
-            rowObj['% {}'.format(answer)] = round(list(group['T1']).count(answer)*100/group.shape[0], 1)
-        
-        none_count = group[group['T1'].isnull()].shape[0]  # also manually add 'None' row since None is parsed to NaN otherwise
-        rowObj['% None'] = round(none_count*100/group.shape[0], 1)
-        
-        galaxy_task1_values.append(rowObj)  # append rowObj to list
+    if not onthego:
+        groupby_name = df_galaxy[['Filename', 'T0', 'T1']].groupby(['Filename'])
+        galaxy_task1_values = []
+        for name in set(galaxy_names):
+            group = groupby_name.get_group(name)        # get all classifications of this object from df
+            
+            rowObj = {
+                "name": name
+            }
+            
+            for answer in ['Fluffy', 'Bright']:  # add 'fluffy' and 'bright' columns
+                rowObj['% {}'.format(answer)] = round(list(group['T1']).count(answer)*100/group.shape[0], 1)
+            
+            none_count = group[group['T1'].isnull()].shape[0]  # also manually add 'None' row since None is parsed to NaN otherwise
+            rowObj['% None'] = round(none_count*100/group.shape[0], 1)
+            
+            galaxy_task1_values.append(rowObj)  # append rowObj to list
 
-    df_task1 = pd.DataFrame(galaxy_task1_values)
-    df_task0 = make_df_task0(df, candidate_names)
-    df_tasks = df_task1.merge(df_task0, on='name', how='outer')
+        df_task1 = pd.DataFrame(galaxy_task1_values)
+        df_tasks = df_task1.merge(df_task0, on='name', how='outer')
+    else:
+        df_tasks = df_task0
     df_tasks_with_props = df_tasks.merge(object_info, how='outer', on='name')  # merge properties onto dataframe
     df_tasks_with_props = df_tasks_with_props[~df_tasks_with_props['# votes'].isnull()]  # filter out objects without actual votes
 
     return df_tasks_with_props 
 
-def make_df_task0(df, candidate_names):
+def make_df_task0(df, candidate_names, onthego):
     # group df by filename, so that each group contains only rows belonging to that object
     gr = df[['Filename', 'T0']].groupby('Filename')
 
@@ -107,7 +116,8 @@ def make_df_task0(df, candidate_names):
 
     df_task0 = pd.DataFrame(task0Values)
 
-    answer_types = ['Galaxy', 'Group of objects (Cluster)', 'Something else/empty center']
+    clusterstring = 'Group of objects (Cluster)' if not onthego else 'Group of objects (cluster)'
+    answer_types = ['Galaxy', clusterstring, 'Something else/empty center']
 
     for ans_type in answer_types:
         vote_percentage_column = df_task0['counts'].apply(

@@ -7,6 +7,7 @@
 /sources/*.pdf
 
 /analysis/classify workflow/*.csv
+/analysis/stack workflows/*.json
 
 **/__pycache__
 **/*.pyc

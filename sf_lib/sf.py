@@ -114,3 +114,50 @@ def get_task_0_value_counts(row):
             value_counts[vote] = 1
     
     return value_counts, len(row)
+
+def as_array(lst):
+    if type(lst) == np.ndarray:
+        return lst
+    return np.array(lst)
+
+def get_running_vote_fraction(df):
+    """
+    Returns a list of (% votes by users that case <= n votes)/total votes as a function of n
+    """
+    users_and_classification_counts = []
+
+    for k, v in df.groupby('user_name').groups.items():
+        users_and_classification_counts.append({
+            'username': k, 
+            'classifications': len(v)
+        })
+        
+    cls_per_user = [entry['classifications'] for entry in users_and_classification_counts]    
+    total_votes = sum(cls_per_user)  # total number of votes made
+    sorted_vote_counts = sorted(cls_per_user)  # sorted list of number of classifications per user
+
+    # create dictionary with keys: # votes per user, values: # users that cast that amount of votes
+    countDict = {}
+    for entry in sorted_vote_counts:
+        countDict[entry] = countDict.get(entry, 0) + 1
+
+    fractions = []
+    for vote_count, occurrence_rate in countDict.items():
+        fractions.append([vote_count, vote_count*occurrence_rate/total_votes, occurrence_rate])
+    counts, fractions, users_included = as_array(fractions).T
+
+    # create a running fraction of total votes cast in a single loop
+    running_fraction = []
+    for i, fr in enumerate(fractions):
+        if i == 0:
+            val = fr
+        else:
+            val = fr+running_fraction[i-1]
+        running_fraction.append(val)    
+
+    return [   
+        users_and_classification_counts,
+        cls_per_user, 
+        counts,
+        running_fraction
+    ]
