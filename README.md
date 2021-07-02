@@ -1,4 +1,4 @@
-This repo contains all documents of relevance for my BSc research project "Fluffy or bright? Analysis
+This repo contains all documents of relevance for my BSc research project __"Fluffy or bright? Using citizen science to find low-surface brightness and ultra-diffuse galaxies in the Fornax cluster."__
 
 ## Important files to include
 Some files are too large to include in this repository, but without them, the majority of the Notebooks will notwork. They are all available [in a compressed file on Google Drive](https://drive.google.com/file/d/1kMQ7O18aRKn83wPoTQP1_7ePp9ezArT5/view?usp=sharing). The folder structure indicates where each of these files should be placed. For example, the `zooniverse_exports` folder in `SpaceFluff/zooniverse_exports` should be placed in the `./SpaceFluff` folder (relative to the directory where this README is located.)
