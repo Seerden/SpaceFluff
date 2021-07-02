@@ -14,6 +14,11 @@ import numpy as np
 import json
 
 def make_df_classify(workflow, task_indices=[0,1]):  # [0,1] are the indices from the classify workflow
+    """
+        Create a dataframe where each contains a single classification, from a Zooniverse .csv file.
+        @param {str} workflow: one of 'classify', 'onthego' and 'hardcore'
+        @param {List[Int]} task_indices: list of task indices present in the given workflow
+    """
     converters = { column_name: json_parser for column_name in ['annotations', 'subject_data', 'metadata'] }
 
     cwd = os.path.dirname(os.path.abspath(__file__))

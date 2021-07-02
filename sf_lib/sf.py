@@ -52,8 +52,8 @@ def extract_task_value(task_index, row):
 
 def percentageVotesForAnswer(counts, answer):
     '''
-    `counts` is a df column like {galaxy: 15, group of objects (cluster): 10, something else/empty center: 2}
-    `answer` is one of the keys of counts
+    @param counts: a df column like {galaxy: 15, group of objects (cluster): 10, something else/empty center: 2}
+    @paramanswer: one of the keys of `counts`
     '''
 
     totalVotes = sum(counts.values())
@@ -103,6 +103,7 @@ def get_power_users(df, vote_count_threshold):
     return filtered_usernames_and_votes
 
 def get_task_0_value_counts(row):
+    "Get task 0 value counts for one row of a group of classifications"
     row = list(row)
 
     # value_counts = {answer: 0 for answer in answer_types}
@@ -116,13 +117,17 @@ def get_task_0_value_counts(row):
     return value_counts, len(row)
 
 def as_array(lst):
+    'Turn a Python list into a NumPy array'
     if type(lst) == np.ndarray:
         return lst
     return np.array(lst)
 
 def get_running_vote_fraction(df):
     """
-    Returns a list of (% votes by users that case <= n votes)/total votes as a function of n
+    Returns a list of 
+        (% votes by users that case <= n votes)/total votes 
+    as a function of n
+    @param df: `df`-like dataframe, where each row corresponds to a single classification made by a single user
     """
     users_and_classification_counts = []
 

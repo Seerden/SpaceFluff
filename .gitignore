@@ -15,3 +15,11 @@
 **/*.pyc
 
 **/image/des/
+
+/thesis
+
+/analysis/stack workflows/plots/**/*.png
+/analysis/stack workflows/plots_final/**/*.png
+/analysis/stack workflows/*.png
+
+/catalogue/**/*.png

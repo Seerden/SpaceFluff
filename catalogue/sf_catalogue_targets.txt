@@ -1,5 +1,3 @@
-# contains a list of target names that occur both in Aku's catalogue (after selection cuts) and in SpaceFluff.
-# so these are supposedly LSBs/UDGs
 UDGcand_3
 UDGcand_30
 UDGcand_50
